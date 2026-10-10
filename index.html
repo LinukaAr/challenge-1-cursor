@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Health calculators</title>
+  <style>
+    :root {
+      --bg: #efe6d8;
+      --ink: #241c16;
+      --muted: #64584c;
+      --card: #fffaf3;
+      --line: #e3d5c4;
+      --green: #1c6b48;
+      --green-deep: #124832;
+      --green-soft: #e5f3eb;
+      --gold: #e4b15a;
+      --amber: #8a5a12;
+      --blue: #2c5874;
+      --rust: #8e3d32;
+      --shadow: 0 18px 50px rgba(60, 36, 12, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 500px at 10% -10%, #f7f1e6 0%, transparent 55%),
+        var(--bg);
+      font: 16px/1.5 "Segoe UI", Candara, sans-serif;
+    }
+
+    main {
+      width: min(980px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0 64px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-family: Palatino, "Palatino Linotype", Georgia, serif;
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      font-weight: 500;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--green-deep);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .lede {
+      max-width: 38rem;
+      margin: 14px 0 0;
+      color: var(--muted);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 28px;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tabs button,
+    .units button {
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--ink);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .tabs button {
+      min-height: 44px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      color: var(--muted);
+    }
+
+    .tabs button[aria-selected="true"] {
+      background: var(--ink);
+      color: #fffaf3;
+    }
+
+    .tabs button:focus-visible,
+    .units button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 2px solid var(--green);
+      outline-offset: 2px;
+    }
+
+    .units {
+      display: flex;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(255, 250, 243, 0.7);
+      border: 1px solid var(--line);
+    }
+
+    .units button {
+      min-height: 36px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      color: var(--muted);
+    }
+
+    .units button[aria-pressed="true"] {
+      background: var(--green);
+      color: white;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    @media (min-width: 800px) {
+      .layout { grid-template-columns: 1fr 0.9fr; align-items: start; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    form, .result {
+      padding: 22px;
+    }
+
+    .fields {
+      display: grid;
+      gap: 14px;
+    }
+
+    label, .field-label {
+      display: block;
+      font-size: 0.92rem;
+      font-weight: 650;
+    }
+
+    .hint, .formula, footer, .result-detail, .zone p, .gauge-scale {
+      color: var(--muted);
+    }
+
+    .hint, .formula {
+      margin: 6px 0 0;
+      font-size: 0.85rem;
+    }
+
+    input, select {
+      width: 100%;
+      margin-top: 6px;
+      padding: 12px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    .choice {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .choice label {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: white;
+      font-weight: 500;
+    }
+
+    .choice input { width: auto; margin: 0; }
+
+    .result {
+      min-height: 100%;
+    }
+
+    .result-kicker {
+      margin: 0;
+      color: var(--green-deep);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .result-value {
+      margin: 8px 0 0;
+      font-family: Palatino, "Palatino Linotype", Georgia, serif;
+      font-size: clamp(3rem, 7vw, 4.4rem);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+    }
+
+    .result-value span {
+      font-family: "Segoe UI", Candara, sans-serif;
+      font-size: 1rem;
+      letter-spacing: 0;
+      color: var(--muted);
+    }
+
+    .result-detail { margin: 12px 0 0; }
+
+    .result.is-empty .result-value {
+      font-size: 1.7rem;
+      letter-spacing: -0.02em;
+    }
+
+    .gauge { margin-top: 18px; }
+
+    .gauge-track {
+      position: relative;
+      height: 18px;
+    }
+
+    .gauge-bar {
+      display: flex;
+      height: 12px;
+      margin-top: 3px;
+      overflow: hidden;
+      border-radius: 999px;
+    }
+
+    .gauge-mark {
+      position: absolute;
+      top: 0;
+      width: 4px;
+      height: 18px;
+      margin-left: -2px;
+      border-radius: 4px;
+      background: var(--ink);
+    }
+
+    .z-low { background: #b7c9d6; }
+    .z-ok { background: #8fceb0; }
+    .z-over { background: #efc98a; }
+    .z-high { background: #e3aaa2; }
+
+    .gauge-scale {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      font-size: 0.75rem;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .zone, .stat {
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--green-soft);
+    }
+
+    .zone p, .stat p { margin: 0; }
+
+    .zone strong, .stat strong {
+      display: block;
+      margin-top: 4px;
+      color: var(--ink);
+      font-size: 1.25rem;
+    }
+
+    .tone-under { color: var(--blue); }
+    .tone-healthy { color: var(--green); }
+    .tone-over { color: var(--amber); }
+    .tone-high { color: var(--rust); }
+
+    footer {
+      margin-top: 22px;
+      font-size: 0.85rem;
+    }
+
+    noscript p {
+      padding: 12px 14px;
+      background: #fff4d8;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">Health desk</p>
+      <h1>Calculators</h1>
+      <p class="lede">Adult estimates for body mass index, daily calories, water, and exercise heart rate. Useful for a quick check, not a diagnosis.</p>
+    </header>
+
+    <div class="toolbar">
+      <div class="tabs" role="tablist" aria-label="Calculators">
+        <button type="button" role="tab" id="tab-bmi" aria-controls="panel-bmi" aria-selected="true" data-calc="bmi">BMI</button>
+        <button type="button" role="tab" id="tab-calories" aria-controls="panel-calories" aria-selected="false" tabindex="-1" data-calc="calories">Calories</button>
+        <button type="button" role="tab" id="tab-water" aria-controls="panel-water" aria-selected="false" tabindex="-1" data-calc="water">Water</button>
+        <button type="button" role="tab" id="tab-heart" aria-controls="panel-heart" aria-selected="false" tabindex="-1" data-calc="heart">Heart rate</button>
+      </div>
+      <div class="units" role="group" aria-label="Units">
+        <button type="button" data-unit="metric" aria-pressed="true">Metric</button>
+        <button type="button" data-unit="imperial" aria-pressed="false">Imperial</button>
+      </div>
+    </div>
+
+    <noscript><p>Turn on JavaScript to use the calculators.</p></noscript>
+
+    <section class="panel" id="panel-bmi" role="tabpanel" aria-labelledby="tab-bmi" data-calc="bmi">
+      <div class="layout">
+        <div class="card">
+          <form>
+            <div class="fields">
+              <div>
+                <label for="bmi-weight">Weight <span data-metric-label="kg" data-imperial-label="lb">kg</span></label>
+                <input id="bmi-weight" data-weight type="number" inputmode="decimal" min="0" step="0.1" placeholder="70">
+              </div>
+              <div>
+                <label for="bmi-height">Height <span data-metric-label="cm" data-imperial-label="in">cm</span></label>
+                <input id="bmi-height" data-height type="number" inputmode="decimal" min="0" step="0.1" placeholder="170">
+                <p class="hint" data-height-hint>Centimeters</p>
+              </div>
+            </div>
+            <p class="formula">BMI is weight divided by height squared. Categories follow adult WHO cutoffs.</p>
+          </form>
+        </div>
+        <div class="card result is-empty" data-result aria-live="polite">
+          <p class="result-kicker">Body mass index</p>
+          <p class="result-value">Enter weight and height.</p>
+          <p class="result-detail">The result uses adult categories. BMI does not measure body fat.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-calories" role="tabpanel" aria-labelledby="tab-calories" data-calc="calories" hidden>
+      <div class="layout">
+        <div class="card">
+          <form>
+            <div class="fields">
+              <fieldset class="fields" style="border:0;padding:0;margin:0">
+                <legend class="field-label">Sex used by the equation</legend>
+                <div class="choice">
+                  <label><input type="radio" name="cal-sex" value="female"> Female</label>
+                  <label><input type="radio" name="cal-sex" value="male"> Male</label>
+                </div>
+              </fieldset>
+              <div>
+                <label for="cal-age">Age</label>
+                <input id="cal-age" type="number" inputmode="numeric" min="0" step="1" placeholder="30">
+              </div>
+              <div>
+                <label for="cal-weight">Weight <span data-metric-label="kg" data-imperial-label="lb">kg</span></label>
+                <input id="cal-weight" data-weight type="number" inputmode="decimal" min="0" step="0.1" placeholder="70">
+              </div>
+              <div>
+                <label for="cal-height">Height <span data-metric-label="cm" data-imperial-label="in">cm</span></label>
+                <input id="cal-height" data-height type="number" inputmode="decimal" min="0" step="0.1" placeholder="170">
+                <p class="hint" data-height-hint>Centimeters</p>
+              </div>
+              <div>
+                <label for="cal-activity">Activity</label>
+                <select id="cal-activity">
+                  <option value="1.2">Sedentary — little exercise</option>
+                  <option value="1.375">Light — 1 to 3 days a week</option>
+                  <option value="1.55" selected>Moderate — 3 to 5 days a week</option>
+                  <option value="1.725">Very active — 6 to 7 days a week</option>
+                  <option value="1.9">Extra — physical job or two-a-day training</option>
+                </select>
+              </div>
+            </div>
+            <p class="formula">Resting calories use Mifflin–St Jeor. Daily calories multiply that by an activity factor.</p>
+          </form>
+        </div>
+        <div class="card result is-empty" data-result aria-live="polite">
+          <p class="result-kicker">Daily calories</p>
+          <p class="result-value">Enter your details.</p>
+          <p class="result-detail">The equation is defined for female and male adults.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-water" role="tabpanel" aria-labelledby="tab-water" data-calc="water" hidden>
+      <div class="layout">
+        <div class="card">
+          <form>
+            <div class="fields">
+              <div>
+                <label for="water-weight">Weight <span data-metric-label="kg" data-imperial-label="lb">kg</span></label>
+                <input id="water-weight" data-weight type="number" inputmode="decimal" min="0" step="0.1" placeholder="70">
+              </div>
+            </div>
+            <p class="formula">A common coaching range is 30–35 ml of fluid per kilogram of body weight.</p>
+          </form>
+        </div>
+        <div class="card result is-empty" data-result aria-live="polite">
+          <p class="result-kicker">Water</p>
+          <p class="result-value">Enter weight.</p>
+          <p class="result-detail">Heat, exercise, and food change how much you actually need.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-heart" role="tabpanel" aria-labelledby="tab-heart" data-calc="heart" hidden>
+      <div class="layout">
+        <div class="card">
+          <form>
+            <div class="fields">
+              <div>
+                <label for="hr-age">Age</label>
+                <input id="hr-age" type="number" inputmode="numeric" min="0" step="1" placeholder="40">
+              </div>
+            </div>
+            <p class="formula">Maximum heart rate is estimated as 220 minus age. Zones follow the American Heart Association chart: 50–70% moderate, 70–85% vigorous.</p>
+          </form>
+        </div>
+        <div class="card result is-empty" data-result aria-live="polite">
+          <p class="result-kicker">Heart rate</p>
+          <p class="result-value">Enter age.</p>
+          <p class="result-detail">These are averages. Beta blockers and other medicines change heart rate.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>Estimates for general information. They are not medical advice, and they are not a reason to start or stop a diet, medicine, or exercise plan.</footer>
+  </main>
+
+  <script>
+    const LB_PER_KG = 2.2046226218;
+    const CM_PER_IN = 2.54;
+    const state = { unit: "metric", calc: "bmi" };
+
+    const $ = (sel, root = document) => root.querySelector(sel);
+
+    function round(n, digits) {
+      const p = 10 ** digits;
+      return Math.round(n * p) / p;
+    }
+
+    function format(n, digits) {
+      return round(n, digits).toLocaleString("en-US", {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      });
+    }
+
+    function heightPhrase(totalInches) {
+      let feet = Math.floor(totalInches / 12);
+      let inches = Math.round(totalInches - feet * 12);
+      if (inches === 12) {
+        feet += 1;
+        inches = 0;
+      }
+      return feet + " ft " + inches + " in";
+    }
+
+    function readPositive(input) {
+      const raw = input.value.trim();
+      if (raw === "") return { empty: true };
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n <= 0) return { error: "Enter a number greater than zero." };
+      return { value: n };
+    }
+
+    function weightKg(input) {
+      const read = readPositive(input);
+      if (read.empty || read.error) return read;
+      const kg = state.unit === "metric" ? read.value : read.value / LB_PER_KG;
+      if (kg < 25 || kg > 350) return { error: "Weight looks outside the adult range this page expects (about 25–350 kg)." };
+      return { value: kg };
+    }
+
+    function heightCm(input) {
+      const read = readPositive(input);
+      if (read.empty || read.error) return read;
+      const cm = state.unit === "metric" ? read.value : read.value * CM_PER_IN;
+      if (cm < 120 || cm > 230) return { error: "Height looks outside the adult range this page expects (about 120–230 cm)." };
+      return { value: cm };
+    }
+
+    function readAge(input, min, max) {
+      const read = readPositive(input);
+      if (read.empty || read.error) return read;
+      if (read.value < min || read.value > max) {
+        return { error: "Enter an age from " + min + " to " + max + "." };
+      }
+      return { value: read.value };
+    }
+
+    function panelOf(name) {
+      return document.querySelector('.panel[data-calc="' + name + '"]');
+    }
+
+    function render(name, view) {
+      const box = $("[data-result]", panelOf(name));
+      box.classList.toggle("is-empty", !view.value);
+      box.replaceChildren();
+
+      const kicker = document.createElement("p");
+      kicker.className = "result-kicker";
+      kicker.textContent = view.kicker;
+
+      const value = document.createElement("p");
+      value.className = "result-value" + (view.tone ? " " + view.tone : "");
+      value.textContent = view.value || view.empty;
+      if (view.unit) {
+        const unit = document.createElement("span");
+        unit.textContent = " " + view.unit;
+        value.append(unit);
+      }
+
+      const detail = document.createElement("p");
+      detail.className = "result-detail";
+      detail.textContent = view.detail;
+
+      box.append(kicker, value, detail);
+      if (view.extra) box.append(view.extra);
+    }
+
+    function bmiCategory(bmi) {
+      if (bmi < 18.5) return { label: "Underweight", tone: "tone-under" };
+      if (bmi < 25) return { label: "Healthy weight", tone: "tone-healthy" };
+      if (bmi < 30) return { label: "Overweight", tone: "tone-over" };
+      return { label: "Obesity", tone: "tone-high" };
+    }
+
+    function gauge(bmi) {
+      const wrap = document.createElement("div");
+      wrap.className = "gauge";
+      const track = document.createElement("div");
+      track.className = "gauge-track";
+      const bar = document.createElement("div");
+      bar.className = "gauge-bar";
+      ["z-low", "z-ok", "z-over", "z-high"].forEach((cls) => {
+        const zone = document.createElement("span");
+        zone.className = cls;
+        zone.style.flex = cls === "z-low" ? "14" : cls === "z-ok" ? "26" : cls === "z-over" ? "20" : "40";
+        bar.append(zone);
+      });
+      const mark = document.createElement("span");
+      mark.className = "gauge-mark";
+      const clamped = Math.min(40, Math.max(15, bmi));
+      mark.style.left = ((clamped - 15) / 25) * 100 + "%";
+      track.append(bar, mark);
+      const scale = document.createElement("div");
+      scale.className = "gauge-scale";
+      ["15", "18.5", "25", "30", "40"].forEach((tick) => {
+        const s = document.createElement("span");
+        s.textContent = tick;
+        scale.append(s);
+      });
+      wrap.append(track, scale);
+      return wrap;
+    }
+
+    function calcBmi() {
+      const weight = weightKg($("#bmi-weight"));
+      const height = heightCm($("#bmi-height"));
+      const problem = weight.error || height.error;
+      if (problem || weight.empty || height.empty) {
+        render("bmi", {
+          kicker: "Body mass index",
+          empty: problem ? "Check the numbers." : "Enter weight and height.",
+          detail: problem || "The result uses adult categories. BMI does not measure body fat."
+        });
+        return;
+      }
+      const meters = height.value / 100;
+      const bmi = weight.value / (meters * meters);
+      const cat = bmiCategory(bmi);
+      render("bmi", {
+        kicker: "Body mass index",
+        value: format(bmi, 1),
+        tone: cat.tone,
+        detail: cat.label + " on the adult WHO scale. Some countries use lower cutoffs.",
+        extra: gauge(bmi)
+      });
+    }
+
+    function calcCalories() {
+      const sex = document.querySelector('input[name="cal-sex"]:checked');
+      const age = readAge($("#cal-age"), 18, 100);
+      const weight = weightKg($("#cal-weight"));
+      const height = heightCm($("#cal-height"));
+      const problem = age.error || weight.error || height.error;
+      if (problem || !sex || age.empty || weight.empty || height.empty) {
+        render("calories", {
+          kicker: "Daily calories",
+          empty: problem ? "Check the numbers." : "Enter your details.",
+          detail: problem || "The equation is defined for female and male adults."
+        });
+        return;
+      }
+      const base = (10 * weight.value) + (6.25 * height.value) - (5 * age.value);
+      const bmr = sex.value === "male" ? base + 5 : base - 161;
+      const factor = Number($("#cal-activity").value);
+      const tdee = bmr * factor;
+      const extra = document.createElement("div");
+      extra.className = "stat";
+      const label = document.createElement("p");
+      label.textContent = "Resting (BMR)";
+      const strong = document.createElement("strong");
+      strong.textContent = format(bmr, 0) + " kcal";
+      extra.append(label, strong);
+      render("calories", {
+        kicker: "Maintenance calories",
+        value: format(tdee, 0),
+        unit: "kcal",
+        detail: "An estimate of daily energy use at the activity level you picked.",
+        extra
+      });
+    }
+
+    function calcWater() {
+      const weight = weightKg($("#water-weight"));
+      if (weight.error || weight.empty) {
+        render("water", {
+          kicker: "Water",
+          empty: weight.error ? "Check the weight." : "Enter weight.",
+          detail: weight.error || "Heat, exercise, and food change how much you actually need."
+        });
+        return;
+      }
+      const lowL = weight.value * 0.03;
+      const highL = weight.value * 0.035;
+      const lowOz = lowL * 33.814;
+      const highOz = highL * 33.814;
+      render("water", {
+        kicker: "Fluid from drinks",
+        value: format(lowL, 1) + "–" + format(highL, 1),
+        unit: "liters",
+        detail: "About " + format(lowOz, 0) + "–" + format(highOz, 0) + " US fl oz. A starting range, not a target you must hit."
+      });
+    }
+
+    function calcHeart() {
+      const age = readAge($("#hr-age"), 15, 90);
+      if (age.error || age.empty) {
+        render("heart", {
+          kicker: "Heart rate",
+          empty: age.error ? "Check the age." : "Enter age.",
+          detail: age.error || "These are averages. Beta blockers and other medicines change heart rate."
+        });
+        return;
+      }
+      const max = 220 - age.value;
+      const zone = (from, to) => Math.round(max * from) + "–" + Math.round(max * to) + " bpm";
+      const extra = document.createElement("div");
+      extra.className = "split";
+      [
+        ["Moderate", zone(0.5, 0.7), "50–70% of max"],
+        ["Vigorous", zone(0.7, 0.85), "70–85% of max"]
+      ].forEach(([name, range, note]) => {
+        const card = document.createElement("div");
+        card.className = "zone";
+        const p = document.createElement("p");
+        p.textContent = name;
+        const strong = document.createElement("strong");
+        strong.textContent = range;
+        const sub = document.createElement("p");
+        sub.textContent = note;
+        card.append(p, strong, sub);
+        extra.append(card);
+      });
+      render("heart", {
+        kicker: "Estimated maximum",
+        value: String(max),
+        unit: "bpm",
+        detail: "Age-predicted maximum. Use the zones as a general guide.",
+        extra
+      });
+    }
+
+    const calculators = {
+      bmi: calcBmi,
+      calories: calcCalories,
+      water: calcWater,
+      heart: calcHeart
+    };
+
+    function calculate(name) {
+      calculators[name]();
+      updateHeightHints();
+    }
+
+    function updateHeightHints() {
+      document.querySelectorAll("[data-height]").forEach((input) => {
+        const hint = input.parentElement.querySelector("[data-height-hint]");
+        const read = readPositive(input);
+        if (read.empty || read.error) {
+          hint.textContent = state.unit === "metric" ? "Centimeters" : "Inches";
+          return;
+        }
+        if (state.unit === "metric") {
+          hint.textContent = heightPhrase(read.value / CM_PER_IN);
+        } else {
+          hint.textContent = heightPhrase(read.value) + " · " + format(read.value * CM_PER_IN, 0) + " cm";
+        }
+      });
+    }
+
+    function updateUnitChrome() {
+      const imperial = state.unit === "imperial";
+      document.querySelectorAll("[data-metric-label]").forEach((el) => {
+        el.textContent = imperial ? el.dataset.imperialLabel : el.dataset.metricLabel;
+      });
+      document.querySelectorAll(".units button").forEach((btn) => {
+        btn.setAttribute("aria-pressed", String(btn.dataset.unit === state.unit));
+      });
+      document.querySelectorAll("[data-weight], [data-height]").forEach((input) => {
+        input.placeholder = input.id.includes("weight")
+          ? (imperial ? "154" : "70")
+          : (imperial ? "67" : "170");
+      });
+    }
+
+    function convertInputs(toUnit) {
+      const toImperial = toUnit === "imperial";
+      document.querySelectorAll("[data-weight]").forEach((input) => {
+        const read = readPositive(input);
+        if (!read.value) return;
+        const factor = toImperial ? LB_PER_KG : 1 / LB_PER_KG;
+        input.value = String(round(read.value * factor, 1));
+      });
+      document.querySelectorAll("[data-height]").forEach((input) => {
+        const read = readPositive(input);
+        if (!read.value) return;
+        const factor = toImperial ? 1 / CM_PER_IN : CM_PER_IN;
+        input.value = String(round(read.value * factor, 1));
+      });
+    }
+
+    function setUnit(next) {
+      if (next === state.unit) return;
+      convertInputs(next);
+      state.unit = next;
+      updateUnitChrome();
+      calculate(state.calc);
+    }
+
+    function showCalc(name) {
+      state.calc = name;
+      document.querySelectorAll(".panel").forEach((panel) => {
+        panel.hidden = panel.dataset.calc !== name;
+      });
+      document.querySelectorAll('[role="tab"]').forEach((tab) => {
+        const on = tab.dataset.calc === name;
+        tab.setAttribute("aria-selected", String(on));
+        tab.tabIndex = on ? 0 : -1;
+      });
+      calculate(name);
+    }
+
+    document.querySelectorAll("form").forEach((form) => {
+      form.addEventListener("submit", (event) => event.preventDefault());
+      form.addEventListener("input", () => calculate(form.closest(".panel").dataset.calc));
+    });
+
+    document.querySelectorAll(".units button").forEach((btn) => {
+      btn.addEventListener("click", () => setUnit(btn.dataset.unit));
+    });
+
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => {
+        showCalc(tab.dataset.calc);
+        tab.focus();
+      });
+      tab.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+        event.preventDefault();
+        const dir = event.key === "ArrowRight" ? 1 : -1;
+        const next = tabs[(index + dir + tabs.length) % tabs.length];
+        showCalc(next.dataset.calc);
+        next.focus();
+      });
+    });
+
+    updateUnitChrome();
+  </script>
+</body>
+</html>
